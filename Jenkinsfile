@@ -3,8 +3,8 @@ pipeline {
   stages {
     stage('Mvn and Java version') {
       steps {
-        sh '''mvn --version;        
-java -version'''
+        sh 'mvn --version;
+java -version'
       }
     }
 
@@ -22,7 +22,7 @@ java -version'''
 
     stage('Execute jar') {
       steps {
-        sh 'java -jar gosecuri.jar /Documents/mspr;pwd'
+        sh 'java -jar gosecuri.jar /Documents/go-securi-mspr;pwd'
       }
     }
 
