@@ -3,8 +3,7 @@ pipeline {
   stages {
     stage('Mvn and Java version') {
       steps {
-        sh 'mvn --version;
-java -version'
+        sh 'mvn --version ;java -version'
       }
     }
 
