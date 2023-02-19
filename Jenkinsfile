@@ -10,7 +10,7 @@ pipeline {
     NEXUS_REPOSITORY = "maven-releases"
    	NEXUS_GROUP_ID    = "com.example"
     NEXUS_CREDENTIAL_ID = "admin"
-    ARTVERSION = '${env.BUILD_ID}'
+    ARTVERSION = "${env.BUILD_ID}"
   }
   stages {
     stage('Mvn and Java version') {
@@ -35,6 +35,7 @@ pipeline {
             sh 'mvn clean package'
         }
     }
+
     stage("Publish to Nexus Repository Manager") {
                steps {
                    script {
@@ -44,19 +45,19 @@ pipeline {
                        artifactPath = filesByGlob[0].path;
                        artifactExists = fileExists artifactPath;
                        if(artifactExists) {
-                           echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version} ARTVERSION";
+                           echo '''*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version} ARTVERSION''';
                                nexusArtifactUploader(
                                    nexusVersion: NEXUS_VERSION,
                                    protocol: NEXUS_PROTOCOL,
                                    nexusUrl: NEXUS_URL,
                                    groupId: NEXUS_GROUP_ID,
-                                   version: version,
+                                   version: pom.version,
                                    repository: NEXUS_REPOSITORY,
                                    credentialsId: NEXUS_CREDENTIAL_ID,
                                    artifacts: [
-                                       [artifactId: projectName,
+                                       [artifactId: pom.artifactId,
                                         classifier: '',
-                                        file: 'go-securi-mspr-' + version + '.jar',
+                                        file: 'go-securi-mspr-' + pom.version + '.jar',
                                         type: 'jar']
                                    ]
                                 );
