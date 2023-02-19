@@ -1,5 +1,3 @@
-import org.sonatype.maven.polyglot.nexus.NexusPublisher
-
 pipeline {
   agent any
  /* tools {
