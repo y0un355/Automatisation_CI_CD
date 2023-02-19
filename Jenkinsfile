@@ -2,7 +2,7 @@ pipeline {
   agent any
   environment {
           NEXUS_VERSION = "nexus3"
-          NEXUS_PROTOCOL = "http"
+          NEXUS_PROTOCOL = "https"
           NEXUS_URL = "localhost:8081"
           NEXUS_REPOSITORY = "maven-releases"
           NEXUS_CREDENTIAL_ID = "admin"
