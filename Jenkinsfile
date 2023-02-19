@@ -4,12 +4,10 @@ pipeline {
           maven "MAVEN"
   }
   environment {
-          NEXUS_VERSION = "nexus3"
-          NEXUS_PROTOCOL = "https"
-          NEXUS_URL = "localhost:8081"
+          NEXUS_ID = "admin"
+          NEXUS_URL = "http://localhost:8081"
           NEXUS_REPOSITORY = "maven-releases"
-          NEXUS_CREDENTIAL_ID = "admin"
-      }
+  }
   stages {
     stage('Mvn and Java version') {
       steps {
@@ -37,7 +35,6 @@ pipeline {
                 packaging = pom.packaging
                 version = pom.version
                 filepath = "target/${artifactId}-${version}.jar"
-                isSnapshot = version.endsWith("-SNAPSHOT")
             }
             echo groupId
             echo artifactId
