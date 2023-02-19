@@ -91,5 +91,13 @@ pipeline {
             nexusPublisher nexusInstanceId: 'nexus_localhost', nexusRepositoryId: "${nexusRepoRelease}", packages: [[$class: 'MavenPackage', mavenAssetList: [[classifier: '', extension: '', filePath: "${filepath}"]], mavenCoordinate: [artifactId: "${artifactId}", groupId: "${groupId}", packaging: "${packaging}", version: "${version}"]]]
           }
       }
+      stage('SonarQube Analysis') {
+            steps {
+              sh 'mvn clean verify sonar:sonar \
+                    -Dsonar.projectKey=Go-Securi \
+                    -Dsonar.host.url=http://localhost:9000 \
+                    -Dsonar.login=342f4c9f320397a865c577b63e424988930f59b7'
+            }
+          }
    }
 }
