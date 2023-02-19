@@ -4,14 +4,12 @@ pipeline {
     maven "maven"
   } */
   environment {
-    NEXUS_USER = 'admin'
-    NEXUS_PASSWORD = 'admin'
-    SNAP_REPO = 'maven-snapshot'
-    RELEASE_REPO = 'maven-release'
-    CENTRAL_REPO = 'maven-central'
-    NEXUS_IP = 'localhost'
-    NEXUS_PORT = '8081'
-    NEXUS_LOGIN = 'admin'
+    NEXUS_VERSION = "nexus3"
+    NEXUS_PROTOCOL = "http"
+    NEXUS_URL = "localhost:8081"
+    NEXUS_REPOSITORY = "maven-release"
+   	NEXUS_REPO_ID    = "maven-release"
+    NEXUS_CREDENTIAL_ID = "admin"
     ARTVERSION = '${env.BUILD_ID}'
   }
   stages {
