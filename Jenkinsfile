@@ -1,9 +1,22 @@
+def nexusId = 'admin'
+def nexusUrl = 'http://nexus:8081'
+def mavenRepoId = 'maven'
+def nexusRepoSnapshot = "maven-snapshots"
+def nexusRepoRelease = "maven-releases"
+def groupId = ''
+def artefactId = ''
+def filePath = ''
+def packaging = ''
+def version = ''
+
+def isSnapshot = true
+
 pipeline {
   agent any
   stages {
     stage('Mvn and Java version') {
       steps {
-        sh 'mvn --version; java -version'
+        sh 'mvn --version;java -version'
       }
     }
 
@@ -15,45 +28,44 @@ pipeline {
 
     stage('Create jar') {
       steps {
-        sh 'mvn clean; mvn install; mvn compile assembly:single;'
-        script {
-          def artifactPath = sh(returnStdout: true, script: 'ls -t target/*.jar | head -1').trim()
-          nexusArtifactUploader nexusParams: [
-            nexusUrl: 'https://localhost:8081',
-            nexusUsername: 'admin',
-            nexusPassword: credentials('admin'),
-            repository: 'maven-releases',
-            groupId: 'com.example',
-            artifactId: 'gosecuri',
-            version: '1.0',
-            packaging: 'jar',
-            artifact: artifactPath
-          ]
+        sh 'mvn clean;mvn install ;mvn compile assembly:single;'
+      }
+    }
+    stage('Get info from POM') {
+          steps {
+            script {
+                pom = readMavenPom file: 'pom.xml'
+                groupId = pom.groupId
+                artifactId = pom.artifactId
+                packaging = pom.packaging
+                version = pom.version
+                filepath = "target/${artifactId}-${version}.jar"
+                isSnapshot = version.endsWith("-SNAPSHOT")
+            }
+            echo groupId
+            echo artifactId
+            echo packaging
+            echo version
+            echo filepath
+            echo "isSnapshot: ${isSnapshot}"
+          }
+      }
+    
+    stage('Build') {
+        steps {
+            sh 'mvn clean package'
         }
-      }
     }
-
-    stage('Build jar') {
+    stage('Push SNAPSHOT to Nexus') {
+      when { expression { isSnapshot } }
       steps {
-        sh 'mvn clean package'
+        sh "mvn deploy:deploy-file -e -Dinternal.repo.username=admin -Dinternal.repo.password=admin -DgroupId=${groupId} -Dversion=${version} -Dpackaging=${packaging} -Durl=${nexusUrl}/repository/${nexusRepoSnapshot}/ -Dfile=${filepath} -DartifactId=${artifactId} -DrepositoryId=${mavenRepoId}"
       }
     }
-  }
-}
 
-def nexusArtifactUploader(def nexusParams) {
-  def artifactPath = nexusParams.artifact
-  def nexusUrl = nexusParams.nexusUrl
-  def nexusUsername = nexusParams.nexusUsername
-  def nexusPassword = nexusParams.nexusPassword
-  def repository = nexusParams.repository
-  def groupId = nexusParams.groupId
-  def artifactId = nexusParams.artifactId
-  def version = nexusParams.version
-  def packaging = nexusParams.packaging
-  def mavenCoords = "${groupId}:${artifactId}:${version}"
-  def nexusUrlPath = "${nexusUrl}/repository/${repository}"
-  def nexusArtifactPath = "${nexusUrlPath}/${groupId.replace('.','/')}/${artifactId}/${version}/${artifactId}-${version}.${packaging}"
-  sh "curl -v -u ${nexusUsername}:${nexusPassword} --upload-file ${artifactPath} ${nexusArtifactPath}"
-  echo "Artifact ${mavenCoords} uploaded to Nexus repository ${repository} at ${nexusUrlPath}"
-}
+    stage('Push RELEASE to Nexus') {
+      when { expression { !isSnapshot }}
+      steps {
+        nexusPublisher(nexusInstanceId: 'nexus_localhost', nexusRepositoryId: "${nexusRepoRelease}", packages: [[$class: 'MavenPackage', mavenAssetList: [[classifier: '', extension: '', filePath: "${filepath}"]], mavenCoordinate: [artifactId: "${artifactId}", groupId: "${groupId}", packaging: "${packaging}", version: "${version}"]]])
+      }
+    }
