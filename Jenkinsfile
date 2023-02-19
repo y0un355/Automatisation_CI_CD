@@ -7,6 +7,11 @@ pipeline {
           NEXUS_ID = "admin"
           NEXUS_URL = "http://localhost:8081"
           NEXUS_REPOSITORY = "maven-releases"
+          GROUP_ID = ''
+          ARTEFACT_ID = ''
+          def FILE_PATH = ''
+          def PACKAGGING = ''
+          def VERSION = ''
   }
   stages {
     stage('Mvn and Java version') {
@@ -30,17 +35,17 @@ pipeline {
           steps {
             script {
                 pom = readMavenPom file: 'pom.xml'
-                groupId = pom.groupId
-                artifactId = pom.artifactId
-                packaging = pom.packaging
-                version = pom.version
-                filepath = "target/${artifactId}-${version}.jar"
+                GROUP_ID = pom.groupId
+                ARTEFACT_ID = pom.artifactId
+                PACKAGING = pom.packaging
+                VERSION = pom.version
+                FILE_PATH = "target/${artifactId}-${version}.jar"
             }
-            echo groupId
+            echo GROUP_ID
             echo artifactId
-            echo packaging
-            echo version
-            echo filepath
+            echo PACKAGING
+            echo VERSION
+            echo FILE_PATH
           }
       }
     stage('Build package') {
@@ -50,7 +55,7 @@ pipeline {
     }
     stage('Publish to Nexus Repository Manager') {
         steps {
-              sh 'mvn deploy:deploy-file -e -Dinternal.repo.username=admin -Dinternal.repo.password=admin -DgroupId=${groupId} -Dversion=${version} -Dpackaging=${packaging} -Durl=${NEXUS_URL}/repository/ -Dfile=${filepath} -DartifactId=${artifactId} -DrepositoryId=${NEXUS_REPOSITORY}'
+              sh 'mvn deploy:deploy-file -e -Dinternal.repo.username=admin -Dinternal.repo.password=admin -DgroupId=${GROUP_ID} -Dversion=${VERSION} -Dpackaging=${PACKAGING} -Durl=${NEXUS_URL}/repository/ -Dfile=${FILE_PATH} -DartifactId=${artifactId} -DrepositoryId=${NEXUS_REPOSITORY}'
             }
 
       }
