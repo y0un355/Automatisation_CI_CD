@@ -1,62 +1,108 @@
+// Lien vers Nexus, doit correspondre à l'instance paramétrée dans Jenkins
+def nexusId = 'nexus_localhost'
+
+/* *** Configuration de Nexus pour Maven ***/
+// URL de Nexus
+def nexusUrl = 'http://localhost:8081'
+// Repo Id (provient du settings.xml nexus pour récupérer user/password)
+def mavenRepoId = 'nexusLocal'
+
+/* *** Repositories Nexus *** */
+def nexusRepoSnapshot = "maven-snapshots"
+def nexusRepoRelease = "maven-releases"
+
+
+
+/* *** Détail du projet, récupéré dans le pipeline en lisant le pom.xml *** */
+def groupId = ''
+def artefactId = ''
+def filePath = ''
+def packaging = ''
+def version = ''
+
+// Variable utilisée pour savoir si c'est une RELEASE ou une SNAPSHOT
+def isSnapshot = true
+
 pipeline {
-  agent any
- /* tools {
-    maven "maven"
-  } */
-  environment {
-    MAVEN_HOME = tool 'MAVEN'
-    NEXUS_VERSION = "nexus3"
-    NEXUS_PROTOCOL = "http"
-    NEXUS_URL = "http://localhost:8081"
-    NEXUS_REPOSITORY = "releases"
-   	NEXUS_GROUP_ID    = "com.example"
-    NEXUS_CREDENTIAL_ID = "admin"
-    ARTVERSION = "${env.BUILD_ID}"
-  }
-  stages {
-    stage('Mvn and Java version') {
-      steps {
-        sh 'mvn --version;java -version'
+   agent any
+
+   stages {
+   stage('Mvn and Java version') {
+         steps {
+           sh 'mvn --version;java -version'
+         }
+       }
+
+       stage('Unit tests') {
+         steps {
+           sh 'mvn test'
+         }
+       }
+
+       stage('Create jar') {
+         steps {
+           sh 'mvn clean;mvn install ;mvn compile assembly:single;'
+         }
+       }
+          stage('Build') {
+                   steps {
+
+                           sh "mvn clean package "
+                   }
+
+       }
+	  // Le checkout n'est pas obligatoire si Jenkins est configuré en mode pipeline from SCM puisqu'il le fait déjà pour récupérer le Jenkinsfile
+      stage('Checkout') {
+         steps {
+            checkout([$class: 'GitSCM', branches: [[name: '*/develop']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/fhoubart/demo-cicd.git']]])
+         }
       }
-    }
-
-    stage('Unit tests') {
-      steps {
-        sh 'mvn test'
-      }
-    }
-
-    stage('Create jar') {
-      steps {
-        sh 'mvn clean;mvn install ;mvn compile assembly:single;'
-      }
-    }
-       stage('Build') {
-                steps {
-
-                        sh "mvn clean package "
-                }
-
-    }
- }
-     post {
-            success {
-                script {
-                    def pom = readMavenPom file: 'pom.xml'
-                    def groupId = pom.groupId
-                    def artifactId = pom.artifactId
-                    def version = pom.version
-                    def packaging = pom.packaging
-
-                    sh "mvn org.sonatype.plugins:nexus-staging-maven-plugin:1.6.7:deploy-staged-repository \
-                      -DnexusUrl=${NEXUS_URL} \
-                      -DserverId=nexus \
-                      -DrepositoryDirectory=target \
-                      -Dartifact=${WORKSPACE}/target/${artifactId}-${version}.${packaging} \
-                      -DautoReleaseAfterClose=true \
-                      -DskipStagingRepositoryClose=false \
-                      -DskipTests"
-                }
+      stage('Get info from POM') {
+          steps {
+            script {
+                pom = readMavenPom file: 'pom.xml'
+                groupId = pom.groupId
+                artifactId = pom.artifactId
+                packaging = pom.packaging
+                version = pom.version
+                filepath = "target/${artifactId}-${version}.jar"
+                isSnapshot = version.endsWith("-SNAPSHOT")
             }
-    }
+            echo groupId
+            echo artifactId
+            echo packaging
+            echo version
+            echo filepath
+            echo "isSnapshot: ${isSnapshot}"
+          }
+      }
+      stage('Build') {
+          steps {
+              sh 'mvn clean package'
+          }
+      }
+
+      /*
+      Ce stage ne se lance que si isSnapshot est vrai
+      Comme on pousse un Snapshot, on utilise le plugin deploy:deploy-file, cela permet de ne pas mettre les paramètres du Repo dans le pom.xml
+      */
+      stage('Push SNAPSHOT to Nexus') {
+          when { expression { isSnapshot } }
+          steps {
+              sh "mvn deploy:deploy-file -e -DgroupId=${groupId} -Dversion=${version} -Dpackaging=${packaging} -Durl=${nexusUrl}/repository/${nexusRepoSnapshot} -Dfile=${filepath} -DartifactId=${artifactId} -DrepositoryId=${mavenRepoId}"
+
+          }
+      }
+
+     /*
+     Ce stage ne se lance que si isSnapshot est faux
+     On pousse la release via le plugin Nexus
+     */
+      stage('Push RELEASE to Nexus') {
+          when { expression { !isSnapshot } }
+          steps {
+            nexusPublisher nexusInstanceId: 'nexus_localhost', nexusRepositoryId: "${nexusRepoRelease}", packages: [[$class: 'MavenPackage', mavenAssetList: [[classifier: '', extension: '', filePath: "${filepath}"]], mavenCoordinate: [artifactId: "${artifactId}", groupId: "${groupId}", packaging: "${packaging}", version: "${version}"]]]
+          }
+      }
+   }
 }
