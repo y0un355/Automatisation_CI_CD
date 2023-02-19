@@ -34,7 +34,7 @@ pipeline {
     }
     stage('Build') {
         steps {
-            sh 'mvn -s settings.xml install'
+            sh 'mvn clean package'
         }
     }
     stage("Publish to Nexus Repository Manager") {
