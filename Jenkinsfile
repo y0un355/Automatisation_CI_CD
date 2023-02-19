@@ -51,12 +51,7 @@ pipeline {
     stage("Publish to Nexus Repository Manager") {
                 steps {
                       sh "mvn deploy:deploy-file -e -Dinternal.repo.username=admin -Dinternal.repo.password=admin -DgroupId=${groupId} -Dversion=${version} -Dpackaging=${packaging} -Durl=${NEXUS_URL}/repository/ -Dfile=${filepath} -DartifactId=${artifactId} -DrepositoryId=${NEXUS_REPOSITORY}"
-                  else {
-                            error "*** File: ${artifactPath}, could not be found";
-                        }
                     }
 
     }
-
-  }
 }
