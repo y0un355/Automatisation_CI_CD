@@ -6,7 +6,7 @@ pipeline {
   environment {
     NEXUS_VERSION = "nexus3"
     NEXUS_PROTOCOL = "http"
-    NEXUS_URL = "localhost:8081"
+    NEXUS_URL = "http://localhost:8081"
     NEXUS_REPOSITORY = "releases"
    	NEXUS_GROUP_ID    = "com.example"
     NEXUS_CREDENTIAL_ID = "admin"
@@ -40,27 +40,24 @@ pipeline {
                steps {
                    script {
                        pom = readMavenPom file: "pom.xml";
+                       def groupId = pom.groupId
+                       def artifactId = pom.artifactId
+                       def version = pom.version
+                       def packaging = pom.packaging
                        filesByGlob = findFiles(glob: "target/*.${pom.packaging}");
                        echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
                        artifactPath = filesByGlob[0].path;
                        artifactExists = fileExists artifactPath;
                        if(artifactExists) {
                            echo '''*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version} ARTVERSION''';
-                               nexusArtifactUploader(
-                                   nexusVersion: NEXUS_VERSION,
-                                   protocol: NEXUS_PROTOCOL,
-                                   nexusUrl: NEXUS_URL,
-                                   groupId: NEXUS_GROUP_ID,
-                                   version: pom.version,
-                                   repository: NEXUS_REPOSITORY,
-                                   credentialsId: NEXUS_CREDENTIAL_ID,
-                                   artifacts: [
-                                       [artifactId: pom.artifactId,
-                                        classifier: '',
-                                        file: 'go-securi-mspr-' + pom.version + '.jar',
-                                        type: 'jar']
-                                   ]
-                                );
+                           def nexusPublisher = NexusPublisher.newPublisher(credentialsId: NEXUS_CREDENTIALS_ID, nexusUrl: NEXUS_URL)
+                              nexusPublisher.upload(
+                                              groupId: groupId,
+                                              artifactId: artifactId,
+                                              version: version,
+                                              packaging: packaging,
+                                              file: "target/${artifactId}-${version}.${packaging}"
+                                          );
                        }
    		    else {
                            error "*** File: ${artifactPath}, could not be found";
