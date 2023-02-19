@@ -39,6 +39,7 @@ pipeline {
                 }
 
     }
+    }
      post {
             success {
                 script {
@@ -58,6 +59,4 @@ pipeline {
                       -DskipTests"
                 }
             }
-        }
-        }
-}
+    }
