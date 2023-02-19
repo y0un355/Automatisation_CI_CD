@@ -1,6 +1,6 @@
 def nexusId = 'nexus_localhost'
 def nexusUrl = 'http://localhost:8081'
-def mavenRepoId = 'maven-public'
+def mavenRepoId = 'nexusLocal'
 def nexusRepoSnapshot = "maven-snapshots"
 def nexusRepoRelease = "maven-releases"
 def groupId = ''
