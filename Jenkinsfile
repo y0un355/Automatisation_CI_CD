@@ -51,7 +51,7 @@ pipeline {
                     sh "mvn org.sonatype.plugins:nexus-staging-maven-plugin:1.6.7:deploy-staged-repository \
                       -DnexusUrl=${NEXUS_URL} \
                       -DserverId=nexus \
-                      -DrepositoryDirectory=target/staging \
+                      -DrepositoryDirectory=target \
                       -Dartifact=${WORKSPACE}/target/${artifactId}-${version}.${packaging} \
                       -DautoReleaseAfterClose=true \
                       -DskipStagingRepositoryClose=false \
