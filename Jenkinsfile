@@ -28,13 +28,29 @@ pipeline {
         sh 'mvn clean;mvn install ;mvn compile assembly:single;'
       }
     }
-
-    stage('Execute jar') {
-      steps {
-        sh 'java -jar gosecuri.jar /Documents/go-securi-mspr;pwd'
+    stage('Read POM file') {
+          steps {
+            script {
+                pom = readMavenPom file: 'pom.xml'
+                groupId = pom.groupId
+                artifactId = pom.artifactId
+                packaging = pom.packaging
+                version = pom.version
+                filepath = "target/${artifactId}-${version}.jar"
+                isSnapshot = version.endsWith("-SNAPSHOT")
+            }
+            echo groupId
+            echo artifactId
+            echo packaging
+            echo version
+            echo filepath
+          }
       }
+    stage('Build package') {
+        steps {
+            sh 'mvn clean package'
+        }
     }
-
     stage("Publish to Nexus Repository Manager") {
                 steps {
                     script {
