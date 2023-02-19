@@ -8,7 +8,7 @@ pipeline {
     NEXUS_PROTOCOL = "http"
     NEXUS_URL = "localhost:8081"
     NEXUS_REPOSITORY = "maven-releases"
-   	NEXUS_REPO_ID    = "maven-releases"
+   	NEXUS_GROUP_ID    = "com.example"
     NEXUS_CREDENTIAL_ID = "admin"
     ARTVERSION = '${env.BUILD_ID}'
   }
@@ -45,25 +45,21 @@ pipeline {
                        artifactExists = fileExists artifactPath;
                        if(artifactExists) {
                            echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version} ARTVERSION";
-                           nexusArtifactUploader(
-                               nexusVersion: NEXUS_VERSION,
-                               protocol: NEXUS_PROTOCOL,
-                               nexusUrl: NEXUS_URL,
-                               groupId: pom.groupId,
-                               version: ARTVERSION,
-                               repository: NEXUS_REPOSITORY,
-                               credentialsId: NEXUS_CREDENTIAL_ID,
-                               artifacts: [
-                                   [artifactId: pom.artifactId,
-                                   classifier: '',
-                                   file: artifactPath,
-                                   type: pom.packaging],
-                                   [artifactId: pom.artifactId,
-                                   classifier: '',
-                                   file: "pom.xml",
-                                   type: "pom"]
-                               ]
-                           );
+                               nexusArtifactUploader(
+                                   nexusVersion: NEXUS_VERSION,
+                                   protocol: NEXUS_PROTOCOL,
+                                   nexusUrl: NEXUS_URL,
+                                   groupId: NEXUS_GROUP_ID,
+                                   version: version,
+                                   repository: NEXUS_REPOSITORY,
+                                   credentialsId: NEXUS_CREDENTIAL_ID,
+                                   artifacts: [
+                                       [artifactId: projectName,
+                                        classifier: '',
+                                        file: 'go-securi-mspr-' + version + '.jar',
+                                        type: 'jar']
+                                   ]
+                                );
                        }
    		    else {
                            error "*** File: ${artifactPath}, could not be found";
