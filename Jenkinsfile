@@ -31,10 +31,10 @@ pipeline {
         sh 'mvn clean;mvn install ;mvn compile assembly:single;'
       }
     }
-       stage('Publish') {
+       stage('Build') {
                 steps {
 
-                        sh "${MAVEN_HOME}/bin/mvn deploy"
+                        sh "mvn clean package "
                 }
 
     }
@@ -48,7 +48,7 @@ pipeline {
                     def version = pom.version
                     def packaging = pom.packaging
 
-                    sh "${MAVEN_HOME}/bin/mvn org.sonatype.plugins:nexus-staging-maven-plugin:1.6.7:deploy-staged-repository \
+                    sh "mvn org.sonatype.plugins:nexus-staging-maven-plugin:1.6.7:deploy-staged-repository \
                       -DnexusUrl=${NEXUS_URL} \
                       -DserverId=nexus \
                       -DrepositoryDirectory=target/staging \
