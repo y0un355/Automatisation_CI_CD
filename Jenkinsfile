@@ -44,13 +44,6 @@ pipeline {
            sh 'mvn clean;mvn install ;mvn compile assembly:single;'
          }
        }
-
-	  // Le checkout n'est pas obligatoire si Jenkins est configuré en mode pipeline from SCM puisqu'il le fait déjà pour récupérer le Jenkinsfile
-      stage('Checkout') {
-         steps {
-            checkout([$class: 'GitSCM', branches: [[name: '*/develop']], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[url: 'https://github.com/y0un355/Automatisation_CI_CD.git']]])
-         }
-      }
       stage('Get info from POM') {
           steps {
             script {
