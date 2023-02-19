@@ -1,9 +1,12 @@
+import org.sonatype.maven.polyglot.nexus.NexusPublisher
+
 pipeline {
   agent any
  /* tools {
     maven "maven"
   } */
   environment {
+    MAVEN_HOME = tool 'Maven 3.6.0'
     NEXUS_VERSION = "nexus3"
     NEXUS_PROTOCOL = "http"
     NEXUS_URL = "http://localhost:8081"
@@ -30,41 +33,32 @@ pipeline {
         sh 'mvn clean;mvn install ;mvn compile assembly:single;'
       }
     }
-    stage('Build') {
-        steps {
-            sh 'mvn clean package'
-        }
+       stage('Publish') {
+                steps {
+                    withMaven(maven: MAVEN_HOME, mavenSettingsConfig: 'maven-settings') {
+                        sh "${MAVEN_HOME}/bin/mvn deploy"
+                    }
+                }
+
     }
+     post {
+            success {
+                script {
+                    def pom = readMavenPom file: 'pom.xml'
+                    def groupId = pom.groupId
+                    def artifactId = pom.artifactId
+                    def version = pom.version
+                    def packaging = pom.packaging
 
-    stage("Publish to Nexus Repository Manager") {
-               steps {
-                   script {
-                       pom = readMavenPom file: "pom.xml";
-                       def groupId = pom.groupId
-                       def artifactId = pom.artifactId
-                       def version = pom.version
-                       def packaging = pom.packaging
-                       filesByGlob = findFiles(glob: "target/*.${pom.packaging}");
-                       echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
-                       artifactPath = filesByGlob[0].path;
-                       artifactExists = fileExists artifactPath;
-                       if(artifactExists) {
-                           echo '''*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version} ARTVERSION''';
-                           def nexusPublisher = NexusPublisher.newPublisher(credentialsId: NEXUS_CREDENTIALS_ID, nexusUrl: NEXUS_URL)
-                              nexusPublisher.upload(
-                                              groupId: groupId,
-                                              artifactId: artifactId,
-                                              version: version,
-                                              packaging: packaging,
-                                              file: "target/${artifactId}-${version}.${packaging}"
-                                          );
-                       }
-   		    else {
-                           error "*** File: ${artifactPath}, could not be found";
-                       }
-                   }
-               }
-           }
-
-}
+                    sh "${MAVEN_HOME}/bin/mvn org.sonatype.plugins:nexus-staging-maven-plugin:1.6.7:deploy-staged-repository \
+                      -DnexusUrl=${NEXUS_URL} \
+                      -DserverId=nexus \
+                      -DrepositoryDirectory=target/staging \
+                      -Dartifact=${WORKSPACE}/target/${artifactId}-${version}.${packaging} \
+                      -DautoReleaseAfterClose=true \
+                      -DskipStagingRepositoryClose=false \
+                      -DskipTests"
+                }
+            }
+        }
 }
