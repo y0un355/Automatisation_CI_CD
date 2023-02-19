@@ -1,22 +1,9 @@
 pipeline {
   agent any
-  tools {
-          maven "MAVEN"
-  }
-  environment {
-          NEXUS_ID = "admin"
-          NEXUS_URL = "http://localhost:8081"
-          NEXUS_REPOSITORY = "maven-releases"
-          GROUP_ID = ''
-          ARTEFACT_ID = ''
-          FILE_PATH = ''
-          PACKAGGING = ''
-          VERSION = ''
-  }
   stages {
     stage('Mvn and Java version') {
       steps {
-        sh 'mvn --version ;java -version'
+        sh 'mvn --version; java -version'
       }
     }
 
@@ -28,36 +15,45 @@ pipeline {
 
     stage('Create jar') {
       steps {
-        sh 'mvn clean;mvn install ;mvn compile assembly:single;'
-      }
-    }
-    stage('Read POM file') {
-          steps {
-            script {
-                pom = readMavenPom file: 'pom.xml'
-                GROUP_ID = pom.groupId
-                ARTEFACT_ID = pom.artifactId
-                PACKAGING = pom.packaging
-                VERSION = pom.version
-                FILE_PATH = "target/${artifactId}-${version}.jar"
-            }
-            echo GROUP_ID
-            echo ARTEFACT_ID
-            echo PACKAGING
-            echo VERSION
-            echo FILE_PATH
-          }
-      }
-    stage('Build package') {
-        steps {
-            sh 'mvn clean package'
+        sh 'mvn clean; mvn install; mvn compile assembly:single;'
+        script {
+          def artifactPath = sh(returnStdout: true, script: 'ls -t target/*.jar | head -1').trim()
+          nexusArtifactUploader nexusParams: [
+            nexusUrl: 'https://localhost:8081',
+            nexusUsername: 'admin',
+            nexusPassword: credentials('admin'),
+            repository: 'maven-releases',
+            groupId: 'com.example',
+            artifactId: 'gosecuri',
+            version: '1.0',
+            packaging: 'jar',
+            artifact: artifactPath
+          ]
         }
-    }
-    stage('Publish to Nexus Repository Manager') {
-        steps {
-              sh 'mvn deploy:deploy-file -e -Dinternal.repo.username=admin -Dinternal.repo.password=admin -DgroupId=${GROUP_ID} -Dversion=${VERSION} -Dpackaging=${PACKAGING} -Durl=${NEXUS_URL}/repository/ -Dfile=${FILE_PATH} -DartifactId=${artifactId} -DrepositoryId=${NEXUS_REPOSITORY}'
-            }
-
       }
     }
+
+    stage('Build jar') {
+      steps {
+        sh 'mvn clean package'
+      }
+    }
+  }
+}
+
+def nexusArtifactUploader(def nexusParams) {
+  def artifactPath = nexusParams.artifact
+  def nexusUrl = nexusParams.nexusUrl
+  def nexusUsername = nexusParams.nexusUsername
+  def nexusPassword = nexusParams.nexusPassword
+  def repository = nexusParams.repository
+  def groupId = nexusParams.groupId
+  def artifactId = nexusParams.artifactId
+  def version = nexusParams.version
+  def packaging = nexusParams.packaging
+  def mavenCoords = "${groupId}:${artifactId}:${version}"
+  def nexusUrlPath = "${nexusUrl}/repository/${repository}"
+  def nexusArtifactPath = "${nexusUrlPath}/${groupId.replace('.','/')}/${artifactId}/${version}/${artifactId}-${version}.${packaging}"
+  sh "curl -v -u ${nexusUsername}:${nexusPassword} --upload-file ${artifactPath} ${nexusArtifactPath}"
+  echo "Artifact ${mavenCoords} uploaded to Nexus repository ${repository} at ${nexusUrlPath}"
 }
