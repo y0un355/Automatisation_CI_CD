@@ -9,9 +9,9 @@ pipeline {
           NEXUS_REPOSITORY = "maven-releases"
           GROUP_ID = ''
           ARTEFACT_ID = ''
-          def FILE_PATH = ''
-          def PACKAGGING = ''
-          def VERSION = ''
+          FILE_PATH = ''
+          PACKAGGING = ''
+          VERSION = ''
   }
   stages {
     stage('Mvn and Java version') {
@@ -42,7 +42,7 @@ pipeline {
                 FILE_PATH = "target/${artifactId}-${version}.jar"
             }
             echo GROUP_ID
-            echo artifactId
+            echo ARTEFACT_ID
             echo PACKAGING
             echo VERSION
             echo FILE_PATH
