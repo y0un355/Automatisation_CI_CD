@@ -1,9 +1,16 @@
 pipeline {
   agent any
+  environment {
+          NEXUS_VERSION = "nexus3"
+          NEXUS_PROTOCOL = "http"
+          NEXUS_URL = "localhost:8081"
+          NEXUS_REPOSITORY = "maven-releases"
+          NEXUS_CREDENTIAL_ID = "admin"
+      }
   stages {
     stage('Mvn and Java version') {
       steps {
-        sh 'mvn --version; java -version'
+        sh 'mvn --version ;java -version'
       }
     }
 
@@ -15,45 +22,51 @@ pipeline {
 
     stage('Create jar') {
       steps {
-        sh 'mvn clean; mvn install; mvn compile assembly:single;'
-        script {
-          def artifactPath = sh(returnStdout: true, script: 'ls -t target/*.jar | head -1').trim()
-          nexusArtifactUploader nexusParams: [
-            nexusUrl: 'http://localhost:8081/',
-            nexusUsername: 'nexus',
-            nexusPassword: credentials('admin123'),
-            repository: 'maven-releases',
-            groupId: 'com.example',
-            artifactId: 'gosecuri',
-            version: '1.0',
-            packaging: 'jar',
-            artifact: artifactPath
-          ]
-        }
+        sh 'mvn clean;mvn install ;mvn compile assembly:single;'
       }
     }
 
     stage('Execute jar') {
       steps {
-        sh 'java -jar gosecuri.jar /Documents/go-securi-mspr; pwd'
+        sh 'java -jar gosecuri.jar /Documents/go-securi-mspr;pwd'
       }
     }
-  }
-}
 
-def nexusArtifactUploader(def nexusParams) {
-  def artifactPath = nexusParams.artifact
-  def nexusUrl = nexusParams.nexusUrl
-  def nexusUsername = nexusParams.nexusUsername
-  def nexusPassword = nexusParams.nexusPassword
-  def repository = nexusParams.repository
-  def groupId = nexusParams.groupId
-  def artifactId = nexusParams.artifactId
-  def version = nexusParams.version
-  def packaging = nexusParams.packaging
-  def mavenCoords = "${groupId}:${artifactId}:${version}"
-  def nexusUrlPath = "${nexusUrl}/repository/${repository}"
-  def nexusArtifactPath = "${nexusUrlPath}/${groupId.replace('.','/')}/${artifactId}/${version}/${artifactId}-${version}.${packaging}"
-  sh "curl -v -u ${nexusUsername}:${nexusPassword} --upload-file ${artifactPath} ${nexusArtifactPath}"
-  echo "Artifact ${mavenCoords} uploaded to Nexus repository ${repository} at ${nexusUrlPath}"
+    stage("Publish to Nexus Repository Manager") {
+                steps {
+                    script {
+                        pom = readMavenPom file: "pom.xml";
+                        filesByGlob = findFiles(glob: "target/*.${pom.packaging}");
+                        echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
+                        artifactPath = filesByGlob[0].path;
+                        artifactExists = fileExists artifactPath;
+                        if(artifactExists) {
+                            echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version}";
+                            nexusArtifactUploader(
+                                nexusVersion: NEXUS_VERSION,
+                                protocol: NEXUS_PROTOCOL,
+                                nexusUrl: NEXUS_URL,
+                                groupId: pom.groupId,
+                                version: pom.version,
+                                repository: NEXUS_REPOSITORY,
+                                credentialsId: NEXUS_CREDENTIAL_ID,
+                                artifacts: [
+                                    [artifactId: pom.artifactId,
+                                    classifier: '',
+                                    file: artifactPath,
+                                    type: pom.packaging],
+                                    [artifactId: pom.artifactId,
+                                    classifier: '',
+                                    file: "pom.xml",
+                                    type: "pom"]
+                                ]
+                            );
+                        } else {
+                            error "*** File: ${artifactPath}, could not be found";
+                        }
+                    }
+                }
+    }
+
+  }
 }
