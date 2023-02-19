@@ -1,6 +1,6 @@
 # Automatisation_CI_CD
 
-#Groupe :
+# Groupe :
 Youness FAHMI - Saad MOUJID - Khadija TOUTI - Younes LARHLID - Chaimaa Haji
 
 Ona amélioré le projet MSPR qu'on a réalisé l'année derniere en implémentant des tests et en modifiant la pipeline pour répondre aux exigences. Nous avons également mis en place un serveur Jenkins connecté à un serveur Nexus pour le déploiement de snapshots et de versions finales. En outre, nous avons connecté un serveur SonarQube pour assurer une qualité de code optimale.
