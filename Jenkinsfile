@@ -1,18 +1,19 @@
-def nexusId = 'nexus_localhost'
-def nexusUrl = 'http://localhost:8081'
-def mavenRepoId = 'nexusLocal'
-def nexusRepoSnapshot = "maven-snapshots"
-def nexusRepoRelease = "maven-releases"
-def groupId = ''
-def artefactId = ''
-def filePath = ''
-def packaging = ''
-def version = ''
-
-def isSnapshot = true
-
 pipeline {
   agent any
+  tools {
+    maven "maven"
+  }
+  environment {
+    NEXUS_USER = 'admin'
+    NEXUS_PASSWORD = 'admin'
+    SNAP_REPO = 'maven-snapshot'
+    RELEASE_REPO = 'maven-release'
+    CENTRAL_REPO = 'maven-central'
+    NEXUS_IP = 'localhost'
+    NEXUS_PORT = '8081'
+    NEXUS_LOGIN = 'admin'
+    ARTVERSION = '${env.BUILD_ID}'
+  }
   stages {
     stage('Mvn and Java version') {
       steps {
@@ -31,43 +32,47 @@ pipeline {
         sh 'mvn clean;mvn install ;mvn compile assembly:single;'
       }
     }
-    stage('Get info from POM') {
-          steps {
-            script {
-                pom = readMavenPom file: 'pom.xml'
-                groupId = pom.groupId
-                artifactId = pom.artifactId
-                packaging = pom.packaging
-                version = pom.version
-                filepath = "target/${artifactId}-${version}.jar"
-                isSnapshot = version.endsWith("-SNAPSHOT")
-            }
-            echo groupId
-            echo artifactId
-            echo packaging
-            echo version
-            echo filepath
-            echo "isSnapshot: ${isSnapshot}"
-          }
-      }
-    
     stage('Build') {
         steps {
-            sh 'mvn clean package'
+            sh 'mvn -s settings.xml install'
         }
     }
-    stage('Push SNAPSHOT to Nexus') {
-      when { expression { isSnapshot } }
-      steps {
-        sh "mvn deploy:deploy-file -e -Dinternal.repo.username=admin -Dinternal.repo.password=admin -DgroupId=${groupId} -Dversion=${version} -Dpackaging=${packaging} -Durl=${nexusUrl}/repository/${nexusRepoSnapshot}/ -Dfile=${filepath} -DartifactId=${artifactId} -DrepositoryId=${mavenRepoId}"
-      }
-    }
+    stage("Publish to Nexus Repository Manager") {
+               steps {
+                   script {
+                       pom = readMavenPom file: "pom.xml";
+                       filesByGlob = findFiles(glob: "target/*.${pom.packaging}");
+                       echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
+                       artifactPath = filesByGlob[0].path;
+                       artifactExists = fileExists artifactPath;
+                       if(artifactExists) {
+                           echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version} ARTVERSION";
+                           nexusArtifactUploader(
+                               nexusVersion: NEXUS_VERSION,
+                               protocol: NEXUS_PROTOCOL,
+                               nexusUrl: NEXUS_URL,
+                               groupId: pom.groupId,
+                               version: ARTVERSION,
+                               repository: NEXUS_REPOSITORY,
+                               credentialsId: NEXUS_CREDENTIAL_ID,
+                               artifacts: [
+                                   [artifactId: pom.artifactId,
+                                   classifier: '',
+                                   file: artifactPath,
+                                   type: pom.packaging],
+                                   [artifactId: pom.artifactId,
+                                   classifier: '',
+                                   file: "pom.xml",
+                                   type: "pom"]
+                               ]
+                           );
+                       }
+   		    else {
+                           error "*** File: ${artifactPath}, could not be found";
+                       }
+                   }
+               }
+           }
 
-    stage('Push RELEASE to Nexus') {
-      when { expression { !isSnapshot }}
-      steps {
-        nexusPublisher(nexusInstanceId: 'nexus_localhost', nexusRepositoryId: "${nexusRepoRelease}", packages: [[$class: 'MavenPackage', mavenAssetList: [[classifier: '', extension: '', filePath: "${filepath}"]], mavenCoordinate: [artifactId: "${artifactId}", groupId: "${groupId}", packaging: "${packaging}", version: "${version}"]]])
-      }
-    }
 }
 }
