@@ -33,9 +33,8 @@ pipeline {
     }
        stage('Publish') {
                 steps {
-                    withMaven(maven: MAVEN_HOME, mavenSettingsConfig: 'maven-settings') {
+
                         sh "${MAVEN_HOME}/bin/mvn deploy"
-                    }
                 }
 
     }
