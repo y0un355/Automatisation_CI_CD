@@ -4,7 +4,7 @@ pipeline {
     maven "maven"
   } */
   environment {
-    MAVEN_HOME = tool 'Maven 3.6.0'
+    MAVEN_HOME = tool 'MAVEN'
     NEXUS_VERSION = "nexus3"
     NEXUS_PROTOCOL = "http"
     NEXUS_URL = "http://localhost:8081"
