@@ -1,8 +1,8 @@
 pipeline {
   agent any
-  tools {
+ /* tools {
     maven "maven"
-  }
+  } */
   environment {
     NEXUS_USER = 'admin'
     NEXUS_PASSWORD = 'admin'
