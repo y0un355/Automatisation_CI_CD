@@ -44,13 +44,7 @@ pipeline {
            sh 'mvn clean;mvn install ;mvn compile assembly:single;'
          }
        }
-          stage('Build') {
-                   steps {
 
-                           sh "mvn clean package "
-                   }
-
-       }
 	  // Le checkout n'est pas obligatoire si Jenkins est configuré en mode pipeline from SCM puisqu'il le fait déjà pour récupérer le Jenkinsfile
       stage('Checkout') {
          steps {
